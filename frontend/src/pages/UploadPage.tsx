@@ -7,14 +7,14 @@ import { previewTransform } from "../services/api";
 
 const defaultOptions: TransformOptions = {
   mapping: {
-    tank_no: "เลขถัง",
+    tank_no: "เลขตัวถัง",
     item: "รายการ",
-    sale_price: "ราคาขาย",
+    sale_price: "มูลค่ารวม",
     total_value: "มูลค่ารวม",
     product_value: "มูลค่าสินค้า",
     tax: "ภาษี",
-    com_fn: "COM F/N",
-    com: "COM"
+    com_fn: "มูลค่าสินค้า",
+    com: "ภาษี"
   },
   duplicate_mode: "keep",
   finance_sent_item_label: "ส่งไฟแนนซ์",

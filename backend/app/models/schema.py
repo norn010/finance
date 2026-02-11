@@ -6,14 +6,14 @@ from pydantic import BaseModel, Field
 
 
 class ColumnMapping(BaseModel):
-    tank_no: str = Field(default="เลขถัง")
+    tank_no: str = Field(default="เลขตัวถัง")
     item: str = Field(default="รายการ")
-    sale_price: str = Field(default="ราคาขาย")
+    sale_price: str = Field(default="มูลค่ารวม")
     total_value: str = Field(default="มูลค่ารวม")
     product_value: str = Field(default="มูลค่าสินค้า")
     tax: str = Field(default="ภาษี")
-    com_fn: str = Field(default="COM F/N")
-    com: str = Field(default="COM")
+    com_fn: str = Field(default="มูลค่าสินค้า")
+    com: str = Field(default="ภาษี")
 
 
 class TransformOptions(BaseModel):

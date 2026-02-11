@@ -40,6 +40,15 @@ def _ensure_column(df: pd.DataFrame, name: str):
         df[name] = None
 
 
+def _ensure_alias_column(df: pd.DataFrame, alias: str, source: str):
+    if alias in df.columns:
+        return
+    if source in df.columns:
+        df[alias] = df[source]
+    else:
+        df[alias] = None
+
+
 def _validate_required_columns(df: pd.DataFrame, options: TransformOptions) -> list[str]:
     mapping = options.mapping
     required = [
@@ -130,6 +139,17 @@ def apply_business_rules(df: pd.DataFrame, options: TransformOptions) -> RuleEng
         output_df["is_duplicate_tank"] = output_df[tank_col].apply(_normalize_text).isin(
             tank_norm[duplicate_mask].unique()
         )
+
+    # Always expose canonical output columns so users can see
+    # ราคาขาย / COM F/N / COM even when source uses different names.
+    _ensure_alias_column(output_df, "ราคาขาย", mapping.sale_price)
+    _ensure_alias_column(output_df, "COM F/N", mapping.com_fn)
+    _ensure_alias_column(output_df, "COM", mapping.com)
+
+    tail_columns = ["ราคาขาย", "COM F/N", "COM", "rule_applied", "is_duplicate_tank", "group_id"]
+    front_columns = [col for col in output_df.columns if col not in tail_columns]
+    ordered_tail = [col for col in tail_columns if col in output_df.columns]
+    output_df = output_df[front_columns + ordered_tail]
 
     stats = TransformStats(
         rows_in=len(working_df),

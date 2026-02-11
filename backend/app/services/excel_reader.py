@@ -22,6 +22,10 @@ def read_excel_bytes(file_bytes: bytes, filename: str | None = None) -> pd.DataF
 
     try:
         stream = BytesIO(file_bytes)
+        if ext == "xls":
+            return pd.read_excel(stream, engine="xlrd")
+        if ext == "xlsx":
+            return pd.read_excel(stream, engine="openpyxl")
         return pd.read_excel(stream)
     except Exception as exc:
         raise ExcelReadError(f"Unable to read Excel file: {exc}") from exc
