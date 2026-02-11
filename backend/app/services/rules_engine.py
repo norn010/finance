@@ -40,15 +40,6 @@ def _ensure_column(df: pd.DataFrame, name: str):
         df[name] = None
 
 
-def _ensure_alias_column(df: pd.DataFrame, alias: str, source: str):
-    if alias in df.columns:
-        return
-    if source in df.columns:
-        df[alias] = df[source]
-    else:
-        df[alias] = None
-
-
 def _validate_required_columns(df: pd.DataFrame, options: TransformOptions) -> list[str]:
     mapping = options.mapping
     required = [
@@ -114,6 +105,20 @@ def apply_business_rules(df: pd.DataFrame, options: TransformOptions) -> RuleEng
     working_df.loc[finance_broker_mask, mapping.tax] = working_df.loc[finance_broker_mask, mapping.com]
     working_df.loc[finance_broker_mask, "rule_applied"] = "finance_broker"
 
+    # Build tank-level lookup values from source rows:
+    # ราคาขาย  = มูลค่ารวม ของรายการส่งไฟแนนซ์
+    # COM F/N = มูลค่าสินค้า ของรายการนายหน้าไฟแนนซ์
+    sent_price_by_tank = (
+        working_df.loc[finance_sent_mask]
+        .groupby(tank_norm[finance_sent_mask])[mapping.total_value]
+        .agg(_first_non_empty)
+    )
+    broker_comfn_by_tank = (
+        working_df.loc[finance_broker_mask]
+        .groupby(tank_norm[finance_broker_mask])[mapping.product_value]
+        .agg(_first_non_empty)
+    )
+
     output_df = working_df
     if options.duplicate_mode == "group":
         grouped = []
@@ -140,13 +145,13 @@ def apply_business_rules(df: pd.DataFrame, options: TransformOptions) -> RuleEng
             tank_norm[duplicate_mask].unique()
         )
 
-    # Always expose canonical output columns so users can see
-    # ราคาขาย / COM F/N / COM even when source uses different names.
-    _ensure_alias_column(output_df, "ราคาขาย", mapping.sale_price)
-    _ensure_alias_column(output_df, "COM F/N", mapping.com_fn)
-    _ensure_alias_column(output_df, "COM", mapping.com)
+    output_tank_norm = output_df[tank_col].apply(_normalize_text)
+    output_df["ราคาขาย"] = output_tank_norm.map(sent_price_by_tank)
+    output_df["COM F/N"] = output_tank_norm.map(broker_comfn_by_tank)
+    if "COM" in output_df.columns:
+        output_df = output_df.drop(columns=["COM"])
 
-    tail_columns = ["ราคาขาย", "COM F/N", "COM", "rule_applied", "is_duplicate_tank", "group_id"]
+    tail_columns = ["ราคาขาย", "COM F/N", "rule_applied", "is_duplicate_tank", "group_id"]
     front_columns = [col for col in output_df.columns if col not in tail_columns]
     ordered_tail = [col for col in tail_columns if col in output_df.columns]
     output_df = output_df[front_columns + ordered_tail]

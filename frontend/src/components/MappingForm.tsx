@@ -54,8 +54,8 @@ export function MappingForm({ initialValues, onSubmit, submitting }: MappingForm
         <Form.Item name="duplicate_mode" label="โหมดเลขถังซ้ำ">
           <Select
             options={[
-              { value: "keep", label: "keep - คงทุกรายการ" },
-              { value: "group", label: "group - ยุบเลขถังซ้ำ" }
+              { value: "group", label: "group - ยุบเลขถังซ้ำ" },
+              { value: "keep", label: "keep - คงทุกรายการ" }
             ]}
           />
         </Form.Item>
