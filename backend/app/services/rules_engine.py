@@ -93,6 +93,7 @@ def apply_business_rules(df: pd.DataFrame, options: TransformOptions) -> RuleEng
 
     finance_sent_mask = item_norm.eq(options.finance_sent_item_label)
     finance_broker_mask = item_norm.eq(options.finance_broker_item_label)
+    cash_sale_mask = item_norm.eq("ขายสด")
 
     working_df.loc[finance_sent_mask, mapping.total_value] = working_df.loc[
         finance_sent_mask, mapping.sale_price
@@ -107,12 +108,19 @@ def apply_business_rules(df: pd.DataFrame, options: TransformOptions) -> RuleEng
 
     # Build tank-level lookup values from source rows:
     # ราคาขาย  = มูลค่ารวม ของรายการส่งไฟแนนซ์
+    #           ถ้าไม่มีส่งไฟแนนซ์ ให้ใช้มูลค่ารวมของรายการขายสด
     # COM F/N = มูลค่าสินค้า ของรายการนายหน้าไฟแนนซ์
     sent_price_by_tank = (
         working_df.loc[finance_sent_mask]
         .groupby(tank_norm[finance_sent_mask])[mapping.total_value]
         .agg(_first_non_empty)
     )
+    cash_price_by_tank = (
+        working_df.loc[cash_sale_mask]
+        .groupby(tank_norm[cash_sale_mask])[mapping.total_value]
+        .agg(_first_non_empty)
+    )
+    final_price_by_tank = sent_price_by_tank.combine_first(cash_price_by_tank)
     broker_comfn_by_tank = (
         working_df.loc[finance_broker_mask]
         .groupby(tank_norm[finance_broker_mask])[mapping.product_value]
@@ -146,8 +154,10 @@ def apply_business_rules(df: pd.DataFrame, options: TransformOptions) -> RuleEng
         )
 
     output_tank_norm = output_df[tank_col].apply(_normalize_text)
-    output_df["ราคาขาย"] = output_tank_norm.map(sent_price_by_tank)
+    output_df["ราคาขาย"] = output_tank_norm.map(final_price_by_tank)
     output_df["COM F/N"] = output_tank_norm.map(broker_comfn_by_tank)
+    cash_tanks = set(cash_price_by_tank.index.tolist())
+    output_df.loc[output_tank_norm.isin(cash_tanks) & output_df["COM F/N"].isna(), "COM F/N"] = 0
     if "COM" in output_df.columns:
         output_df = output_df.drop(columns=["COM"])
 

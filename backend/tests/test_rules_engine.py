@@ -47,9 +47,9 @@ def _sample_df() -> pd.DataFrame:
             },
             {
                 "เลขถัง": "XYZ999",
-                "รายการ": "อื่นๆ",
+                "รายการ": "ขายสด",
                 "ราคาขายเดิม": 80000,
-                "มูลค่ารวม": 0,
+                "มูลค่ารวม": 599000,
                 "มูลค่าสินค้า": 0,
                 "COM F/N": 0,
                 "COM": 0,
@@ -88,3 +88,11 @@ def test_same_tank_canonical_columns_follow_item_rules():
     assert set(abc_rows["ราคาขาย"].tolist()) == {100000}
     assert set(abc_rows["COM F/N"].tolist()) == {5000}
     assert "COM" not in result.dataframe.columns
+
+
+def test_cash_sale_tank_sets_price_from_total_and_comfn_zero():
+    result = apply_business_rules(_sample_df(), _sample_options())
+    xyz_rows = result.dataframe[result.dataframe["เลขถัง"] == "XYZ999"]
+    assert not xyz_rows.empty
+    assert set(xyz_rows["ราคาขาย"].tolist()) == {599000}
+    assert set(xyz_rows["COM F/N"].tolist()) == {0}
