@@ -71,6 +71,7 @@ def test_finance_broker_updates_product_and_tax():
     broker_row = result.dataframe[result.dataframe["รายการ"] == "นายหน้าไฟแนนซ์"].iloc[0]
     assert broker_row["มูลค่าสินค้า"] == broker_row["COM F/N"]
     assert broker_row["ภาษี"] == 350
+    assert broker_row["COM"] == 350
     assert result.stats.finance_broker_count == 1
 
 
@@ -87,7 +88,11 @@ def test_same_tank_canonical_columns_follow_item_rules():
     assert not abc_rows.empty
     assert set(abc_rows["ราคาขาย"].tolist()) == {100000}
     assert set(abc_rows["COM F/N"].tolist()) == {5000}
-    assert "COM" not in result.dataframe.columns
+    sent_row = abc_rows[abc_rows["รายการ"] == "ส่งไฟแนนซ์"].iloc[0]
+    assert sent_row["COM"] == 0
+    finance_sent_rows = result.dataframe[result.dataframe["rule_applied"] == "finance_sent"]
+    assert not finance_sent_rows.empty
+    assert all(value == 0 for value in finance_sent_rows["COM"].tolist())
 
 
 def test_cash_sale_tank_sets_price_from_total_and_comfn_zero():
@@ -96,3 +101,4 @@ def test_cash_sale_tank_sets_price_from_total_and_comfn_zero():
     assert not xyz_rows.empty
     assert set(xyz_rows["ราคาขาย"].tolist()) == {599000}
     assert set(xyz_rows["COM F/N"].tolist()) == {0}
+    assert set(xyz_rows["COM"].tolist()) == {0}

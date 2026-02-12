@@ -126,6 +126,11 @@ def apply_business_rules(df: pd.DataFrame, options: TransformOptions) -> RuleEng
         .groupby(tank_norm[finance_broker_mask])[mapping.product_value]
         .agg(_first_non_empty)
     )
+    broker_com_by_tank = (
+        working_df.loc[finance_broker_mask]
+        .groupby(tank_norm[finance_broker_mask])[mapping.tax]
+        .agg(_first_non_empty)
+    )
 
     output_df = working_df
     if options.duplicate_mode == "group":
@@ -154,14 +159,19 @@ def apply_business_rules(df: pd.DataFrame, options: TransformOptions) -> RuleEng
         )
 
     output_tank_norm = output_df[tank_col].apply(_normalize_text)
+    output_item_norm = output_df[item_col].apply(_normalize_text)
     output_df["ราคาขาย"] = output_tank_norm.map(final_price_by_tank)
     output_df["COM F/N"] = output_tank_norm.map(broker_comfn_by_tank)
     cash_tanks = set(cash_price_by_tank.index.tolist())
     output_df.loc[output_tank_norm.isin(cash_tanks) & output_df["COM F/N"].isna(), "COM F/N"] = 0
-    if "COM" in output_df.columns:
-        output_df = output_df.drop(columns=["COM"])
+    output_df["COM"] = output_tank_norm.map(broker_com_by_tank)
+    output_df.loc[
+        output_item_norm.isin([options.finance_sent_item_label, "ขายสด"]),
+        "COM",
+    ] = 0
+    output_df.loc[output_df["rule_applied"].eq("finance_sent"), "COM"] = 0
 
-    tail_columns = ["ราคาขาย", "COM F/N", "rule_applied", "is_duplicate_tank", "group_id"]
+    tail_columns = ["ราคาขาย", "COM F/N", "COM", "rule_applied", "is_duplicate_tank", "group_id"]
     front_columns = [col for col in output_df.columns if col not in tail_columns]
     ordered_tail = [col for col in tail_columns if col in output_df.columns]
     output_df = output_df[front_columns + ordered_tail]

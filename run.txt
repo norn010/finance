@@ -2,3 +2,5 @@ backend
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 frondtend
 http://localhost:5173/
+kill
+$conn = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue; if ($conn) { taskkill /PID $conn.OwningProcess /F | Out-Null; Write-Output ('KILLED_PID=' + $conn.OwningProcess) } else { Write-Output 'NO_BACKEND_RUNNING' }
